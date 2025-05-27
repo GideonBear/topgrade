@@ -1534,7 +1534,8 @@ pub fn run_uv_python(ctx: &ExecutionContext) -> Result<()> {
         // We do not print a warning nor print the separator, because:
         //  - The uv_python step is not dependent on a single utility like pip_review is,
         //    if you have uv installed chances are you don't even use `uv python`
-        //  - The uv_python step is dangerous to run, most people might not want to run it
+        //  - The uv_python step for now only works with a single uv-managed python installation
+        //  - The uv_python step can be dangerous to run, most people might not want to run it
         return Err(SkipStep(String::from("uv_python is disabled by default")).into());
     }
 
@@ -1589,6 +1590,9 @@ pub fn run_uv_python(ctx: &ExecutionContext) -> Result<()> {
     // Store which tools are installed before they're broken
     let tools = if ctx.config().uv_python_reinstall_tools() {
         // Example:
+        // black v25.1.0
+        // - black
+        // - blackd
         // get-pypi-latest-version v0.1.0
         // - get_pypi_latest_version
         // termdown v1.18.0
@@ -1605,11 +1609,11 @@ pub fn run_uv_python(ctx: &ExecutionContext) -> Result<()> {
             String::from_utf8(stdout)
                 .wrap_err("Expected valid utf8")?
                 .lines()
-                .step_by(2) // Ignore every second line
+                .filter(|l| !l.starts_with('-')) // Ignore lines starting with "-"
                 // Strip the version
                 .map(|line| {
                     line.split_once(' ')
-                        .ok_or_else(|| eyre!("Expected a space in that line"))
+                        .ok_or_else(|| eyre!(output_changed_message!("uv tool list", "Expected a space in that line")))
                         .map(|parts| parts.0.to_string())
                 })
                 .collect::<Result<Vec<String>>>()?,
