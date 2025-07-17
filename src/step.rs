@@ -607,7 +607,7 @@ impl Step {
                 runner.execute(*self, "toolbx", || toolbx::run_toolbx(ctx))?
             }
             Uv => runner.execute_with_updated(*self, "uv", || generic::run_uv(ctx))?,
-            UvPython => runner.execute(*self, "uv python", || generic::run_uv_python(&ctx))?,
+            UvPython => runner.execute(*self, "uv python", || generic::run_uv_python(ctx))?,
             Vagrant => {
                 if ctx.config().should_run(Vagrant) {
                     if let Ok(boxes) = vagrant::collect_boxes(ctx) {
