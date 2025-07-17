@@ -857,6 +857,7 @@ pub(crate) fn default_steps() -> Vec<Step> {
         Powershell,
         CustomCommands,
         Vagrant,
+        Falconf,
     ]);
 
     steps.shrink_to_fit();
