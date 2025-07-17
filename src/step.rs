@@ -267,9 +267,12 @@ impl Step {
             }
             Containers => runner.execute(*self, "Containers", || containers::run_containers(ctx))?,
             CustomCommands => {
-                if let Some(commands) = ctx.config().pre_commands() {
-                    for (name, command) in commands {
-                        generic::run_custom_command(name, command, ctx)?;
+                if let Some(commands) = ctx.config().commands() {
+                    for (name, command) in commands
+                        .iter()
+                        .filter(|(n, _)| ctx.config().should_run_custom_command(n))
+                    {
+                        runner.execute(*self, name.clone(), || generic::run_custom_command(name, command, ctx))?;
                     }
                 }
             }
@@ -469,9 +472,7 @@ impl Step {
             Powershell => {
                 let powershell = powershell::Powershell::new();
                 if powershell.profile().is_some() {
-                    runner.execute(Powershell, "Powershell Modules Update", || {
-                        powershell.update_modules(ctx)
-                    })?;
+                    runner.execute(*self, "Powershell Modules Update", || powershell.update_modules(ctx))?;
                 }
             }
             Protonup =>
@@ -496,7 +497,7 @@ impl Step {
                         .iter()
                         .filter(|t| ctx.config().should_execute_remote(hostname(), t))
                     {
-                        runner.execute(Remotes, format!("Remote ({remote_topgrade})"), || {
+                        runner.execute(*self, format!("Remote ({remote_topgrade})"), || {
                             crate::ssh::ssh_step(ctx, remote_topgrade)
                         })?;
                     }
@@ -573,7 +574,7 @@ impl Step {
 
                     match ctx.distribution() {
                         Ok(distribution) => {
-                            runner.execute(System, "System update", || distribution.upgrade(ctx))?;
+                            runner.execute(*self, "System update", || distribution.upgrade(ctx))?;
                         }
                         Err(e) => {
                             println!("{}", t!("Error detecting current distribution: {error}", error = e));
@@ -612,13 +613,13 @@ impl Step {
                 if ctx.config().should_run(Vagrant) {
                     if let Ok(boxes) = vagrant::collect_boxes(ctx) {
                         for vagrant_box in boxes {
-                            runner.execute(Vagrant, format!("Vagrant ({})", vagrant_box.smart_name()), || {
+                            runner.execute(*self, format!("Vagrant ({})", vagrant_box.smart_name()), || {
                                 vagrant::topgrade_vagrant_box(ctx, &vagrant_box)
                             })?;
                         }
                     }
                 }
-                runner.execute(Vagrant, "Vagrant boxes", || vagrant::upgrade_vagrant_boxes(ctx))?;
+                runner.execute(*self, "Vagrant boxes", || vagrant::upgrade_vagrant_boxes(ctx))?;
             }
             Vcpkg => runner.execute(*self, "vcpkg", || generic::run_vcpkg_update(ctx))?,
             Vim => {
