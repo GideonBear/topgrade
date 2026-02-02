@@ -1672,14 +1672,14 @@ pub fn run_zigup(ctx: &ExecutionContext) -> Result<()> {
 
 pub fn run_jetbrains_toolbox(ctx: &ExecutionContext) -> Result<()> {
     let installation = find_jetbrains_toolbox();
-    match installation {
+    let installation = match installation {
         Err(FindError::NotFound) => {
             // Skip
-            Err(SkipStep(format!("{}", t!("No JetBrains Toolbox installation found"))).into())
+            return Err(SkipStep(format!("{}", t!("No JetBrains Toolbox installation found"))).into());
         }
         Err(FindError::UnsupportedOS(os)) => {
             // Skip
-            Err(SkipStep(format!("{}", t!("Unsupported operating system {os}", os = os))).into())
+            return Err(SkipStep(format!("{}", t!("Unsupported operating system {os}", os = os))).into());
         }
         Err(e) => {
             // Unexpected error
@@ -1688,29 +1688,29 @@ pub fn run_jetbrains_toolbox(ctx: &ExecutionContext) -> Result<()> {
                 t!("jetbrains-toolbox-updater encountered an unexpected error during finding:")
             );
             println!("{e:?}");
+            return Err(StepFailed.into());
+        }
+        Ok(installation) => installation,
+    };
+
+    print_separator("JetBrains Toolbox");
+
+    if ctx.run_type().dry() {
+        println!("Dry running jetbrains-toolbox-updater");
+        return Ok(());
+    }
+
+    match update_jetbrains_toolbox(installation) {
+        Err(e) => {
+            // Unexpected error
+            println!(
+                "{}",
+                t!("jetbrains-toolbox-updater encountered an unexpected error during updating:")
+            );
+            println!("{e:?}");
             Err(StepFailed.into())
         }
-        Ok(installation) => {
-            print_separator("JetBrains Toolbox");
-
-            if ctx.run_type().dry() {
-                println!("Dry running jetbrains-toolbox-updater");
-                return Ok(());
-            }
-
-            match update_jetbrains_toolbox(installation) {
-                Err(e) => {
-                    // Unexpected error
-                    println!(
-                        "{}",
-                        t!("jetbrains-toolbox-updater encountered an unexpected error during updating:")
-                    );
-                    println!("{e:?}");
-                    Err(StepFailed.into())
-                }
-                Ok(()) => Ok(()),
-            }
-        }
+        Ok(()) => Ok(()),
     }
 }
 
