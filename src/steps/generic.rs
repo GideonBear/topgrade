@@ -1712,6 +1712,10 @@ pub fn run_jetbrains_toolbox(ctx: &ExecutionContext) -> Result<()> {
         }
         Ok(()) => Ok(()),
     }
+
+    if ctx.config().cleanup() {
+
+    }
 }
 
 fn run_jetbrains_ide_generic<const IS_JETBRAINS: bool>(ctx: &ExecutionContext, bin: PathBuf, name: &str) -> Result<()> {
